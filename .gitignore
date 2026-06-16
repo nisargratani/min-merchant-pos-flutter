@@ -132,9 +132,6 @@ test/.test_coverage.dart
 *.hive
 *.hive.lock
 
-# Exported reports / invoices
-exports/
-reports/
 
 # Temporary files
 tmp/
