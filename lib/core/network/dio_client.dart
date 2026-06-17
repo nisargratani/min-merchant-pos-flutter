@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_constants.dart';
 import '../utils/logger.dart';
 import '../database/shared_prefs_service.dart';
@@ -12,7 +13,6 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
 
 /// Provider for the configured Dio instance
 final dioProvider = Provider<Dio>((ref) {
-  final prefs = ref.watch(sharedPreferencesProvider);
 
   final dio = Dio(
     BaseOptions(
@@ -26,8 +26,9 @@ final dioProvider = Provider<Dio>((ref) {
   // Auth & Logging interceptor
   dio.interceptors.add(
     InterceptorsWrapper(
-      onRequest: (options, handler) {
-        final token = prefs.getString('jwt_token');
+      onRequest: (options, handler) async {
+        const secureStorage = FlutterSecureStorage();
+        final token = await secureStorage.read(key: 'jwt_token');
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -42,14 +43,15 @@ final dioProvider = Provider<Dio>((ref) {
         AppLogger.debug('Response Body: ${response.data}', tag: 'Dio');
         handler.next(response);
       },
-      onError: (error, handler) {
+      onError: (error, handler) async {
         AppLogger.error('<-- ERROR ${error.response?.statusCode} ${error.requestOptions.method} ${error.requestOptions.uri}', tag: 'Dio');
         AppLogger.error('Error Message: ${error.message}', tag: 'Dio');
         if (error.response?.data != null) {
           AppLogger.error('Error Response: ${error.response?.data}', tag: 'Dio');
         }
         if (error.response?.statusCode == 401) {
-          prefs.remove('jwt_token');
+          const secureStorage = FlutterSecureStorage();
+          await secureStorage.delete(key: 'jwt_token');
         }
         handler.next(error);
       },

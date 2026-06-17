@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Local data source for auth — manages JWT token and cached user info.
 class AuthLocalDataSource {
   final SharedPreferences _prefs;
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   static const _tokenKey = 'jwt_token';
   static const _userKey = 'cached_user';
@@ -12,18 +14,18 @@ class AuthLocalDataSource {
 
   /// Save JWT token securely.
   Future<void> saveToken(String token) async {
-    await _prefs.setString(_tokenKey, token);
+    await _secureStorage.write(key: _tokenKey, value: token);
   }
 
   /// Get stored JWT token.
-  String? getToken() => _prefs.getString(_tokenKey);
+  Future<String?> getToken() async => await _secureStorage.read(key: _tokenKey);
 
   /// Check if a token is stored.
-  bool get hasToken => _prefs.containsKey(_tokenKey);
+  Future<bool> hasToken() async => await _secureStorage.containsKey(key: _tokenKey);
 
   /// Clear the stored token.
   Future<void> clearToken() async {
-    await _prefs.remove(_tokenKey);
+    await _secureStorage.delete(key: _tokenKey);
   }
 
   /// Cache user JSON for quick access.
@@ -40,7 +42,7 @@ class AuthLocalDataSource {
 
   /// Clear all auth data.
   Future<void> clearAll() async {
-    await _prefs.remove(_tokenKey);
+    await clearToken();
     await _prefs.remove(_userKey);
   }
 }

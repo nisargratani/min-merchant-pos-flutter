@@ -61,12 +61,13 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, User?>> getCurrentUser() async {
-    if (!isAuthenticated) return const Right(null);
+    final isAuth = await isAuthenticated;
+    if (!isAuth) return const Right(null);
 
     try {
       final data = await _remoteDataSource.getMe();
       // Add token from local storage since /users/me doesn't return it
-      final token = _localDataSource.getToken();
+      final token = await _localDataSource.getToken();
       data['token'] = token;
       final user = User.fromJson(data);
       await _localDataSource.cacheUser(data);
@@ -84,5 +85,5 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  bool get isAuthenticated => _localDataSource.hasToken;
+  Future<bool> get isAuthenticated => _localDataSource.hasToken();
 }

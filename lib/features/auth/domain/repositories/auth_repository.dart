@@ -7,5 +7,5 @@ abstract class AuthRepository {
   Future<Either<Failure, User>> login(String username, String password);
   Future<Either<Failure, void>> logout();
   Future<Either<Failure, User?>> getCurrentUser();
-  bool get isAuthenticated;
+  Future<bool> get isAuthenticated;
 }
