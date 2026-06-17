@@ -1,6 +1,10 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/database/database_helper.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/network_info.dart';
 import '../../../../core/usecase/usecase.dart';
+import '../../data/datasources/cart_local_data_source.dart';
 import '../../data/datasources/cart_remote_data_source.dart';
 import '../../data/repositories/cart_repository_impl.dart';
 import '../../domain/entities/cart_item.dart';
@@ -12,10 +16,16 @@ final cartRemoteDataSourceProvider = Provider<CartRemoteDataSource>((ref) {
   return CartRemoteDataSource(ref.watch(dioProvider));
 });
 
+final cartLocalDataSourceProvider = Provider<CartLocalDataSource>((ref) {
+  return CartLocalDataSource(ref.watch(databaseHelperProvider));
+});
+
 // ── Repository ──
 final cartRepositoryProvider = Provider<CartRepository>((ref) {
   return CartRepositoryImpl(
     remoteDataSource: ref.watch(cartRemoteDataSourceProvider),
+    localDataSource: ref.watch(cartLocalDataSourceProvider),
+    networkInfo: ref.watch(networkInfoProvider),
   );
 });
 
@@ -43,18 +53,41 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   final AddToCartUseCase _addToCartUseCase;
   final RemoveFromCartUseCase _removeFromCartUseCase;
   final ClearCartUseCase _clearCartUseCase;
+  final NetworkInfo _networkInfo;
+  StreamSubscription<bool>? _connectivitySubscription;
 
   CartNotifier({
     required GetCartUseCase getCartUseCase,
     required AddToCartUseCase addToCartUseCase,
     required RemoveFromCartUseCase removeFromCartUseCase,
     required ClearCartUseCase clearCartUseCase,
+    required NetworkInfo networkInfo,
   })  : _getCartUseCase = getCartUseCase,
         _addToCartUseCase = addToCartUseCase,
         _removeFromCartUseCase = removeFromCartUseCase,
         _clearCartUseCase = clearCartUseCase,
+        _networkInfo = networkInfo,
         super(const AsyncValue.data(Cart.empty)) {
+    _init();
+  }
+
+  void _init() {
     fetchCart();
+    _listenToConnectivity();
+  }
+
+  void _listenToConnectivity() {
+    _connectivitySubscription = _networkInfo.onConnectivityChanged.listen((isOnline) {
+      if (isOnline) {
+        fetchCart();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> fetchCart() async {
@@ -98,5 +131,6 @@ final cartNotifierProvider =
     addToCartUseCase: ref.watch(addToCartUseCaseProvider),
     removeFromCartUseCase: ref.watch(removeFromCartUseCaseProvider),
     clearCartUseCase: ref.watch(clearCartUseCaseProvider),
+    networkInfo: ref.watch(networkInfoProvider),
   );
 });

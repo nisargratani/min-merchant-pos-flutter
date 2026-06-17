@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/database/shared_prefs_service.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/network_info.dart';
 import '../../../../core/usecase/usecase.dart';
+import '../../data/datasources/report_local_data_source.dart';
 import '../../data/datasources/report_remote_data_source.dart';
 import '../../data/repositories/report_repository_impl.dart';
 import '../../domain/entities/report.dart';
@@ -12,10 +15,16 @@ final reportRemoteDataSourceProvider = Provider<ReportRemoteDataSource>((ref) {
   return ReportRemoteDataSource(ref.watch(dioProvider));
 });
 
+final reportLocalDataSourceProvider = Provider<ReportLocalDataSource>((ref) {
+  return ReportLocalDataSource(SharedPrefsService.instance);
+});
+
 // ── Repository ──
 final reportRepositoryProvider = Provider<ReportRepository>((ref) {
   return ReportRepositoryImpl(
     remoteDataSource: ref.watch(reportRemoteDataSourceProvider),
+    localDataSource: ref.watch(reportLocalDataSourceProvider),
+    networkInfo: ref.watch(networkInfoProvider),
   );
 });
 

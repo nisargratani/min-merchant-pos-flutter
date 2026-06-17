@@ -18,15 +18,18 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 1,
       onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
+      onOpen: (db) async {
+        // Fallback to ensure tables exist since we are keeping version at 1
+        await _onCreate(db, 1);
+      },
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE offline_orders (
+      CREATE TABLE IF NOT EXISTS offline_orders (
         localOrderId TEXT PRIMARY KEY,
         serverOrderId INTEGER,
         paymentStatus TEXT NOT NULL,
@@ -40,7 +43,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE offline_order_items (
+      CREATE TABLE IF NOT EXISTS offline_order_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         localOrderId TEXT NOT NULL,
         productId INTEGER NOT NULL,
@@ -52,31 +55,20 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE products (
+      CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
         price REAL NOT NULL,
         stock INTEGER NOT NULL
       )
     ''');
-  }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      // Add payment simulation columns
-      await db.execute('ALTER TABLE offline_orders ADD COLUMN paymentRef TEXT');
-      await db.execute('ALTER TABLE offline_orders ADD COLUMN paymentId INTEGER');
-    }
-    if (oldVersion < 3) {
-      await db.execute('''
-        CREATE TABLE products (
-          id INTEGER PRIMARY KEY,
-          name TEXT NOT NULL,
-          price REAL NOT NULL,
-          stock INTEGER NOT NULL
-        )
-      ''');
-    }
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS cart_items (
+        productId INTEGER PRIMARY KEY,
+        qty INTEGER NOT NULL
+      )
+    ''');
   }
 }
 

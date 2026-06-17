@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/network_info.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 
@@ -11,21 +10,11 @@ class OrderListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ordersAsync = ref.watch(orderNotifierProvider);
     final user = ref.watch(currentUserProvider);
-    final connectivityAsync = ref.watch(connectivityStreamProvider);
-    final isOnline = connectivityAsync.valueOrNull ?? true;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Orders'),
         actions: [
-          // Connectivity indicator
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: Icon(
-              isOnline ? Icons.wifi : Icons.wifi_off,
-              color: isOnline ? Colors.green : Colors.red,
-            ),
-          ),
           IconButton(
             icon: const Icon(Icons.sync),
             tooltip: 'Sync Pending Orders',
@@ -52,8 +41,10 @@ class OrderListScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.receipt_long, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
-                  Text('No orders yet',
-                      style: TextStyle(fontSize: 18, color: Colors.grey)),
+                  Text(
+                    'No orders yet',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
                 ],
               ),
             );
@@ -63,8 +54,7 @@ class OrderListScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final order = orders[index];
               return Card(
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 child: ExpansionTile(
                   leading: _buildSyncStatusIcon(order.syncStatus),
                   title: Text(
@@ -93,7 +83,9 @@ class OrderListScreen extends ConsumerWidget {
                       ...order.items.map(
                         (item) => ListTile(
                           dense: true,
-                          title: Text(item.productName ?? 'Product #${item.productId}'),
+                          title: Text(
+                            item.productName ?? 'Product #${item.productId}',
+                          ),
                           trailing: Text(
                             '${item.qty} × \$${item.price.toStringAsFixed(2)}',
                           ),
@@ -104,15 +96,17 @@ class OrderListScreen extends ConsumerWidget {
 
                     // Payment info section
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 4.0,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Payment Details',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
                           _infoRow('Payment Status', order.paymentStatus),
@@ -123,9 +117,9 @@ class OrderListScreen extends ConsumerWidget {
                             _infoRow('Payment ID', '#${order.paymentId}'),
                           _infoRow(
                             'Created',
-                            DateTime.fromMillisecondsSinceEpoch(order.createdAt)
-                                .toString()
-                                .substring(0, 19),
+                            DateTime.fromMillisecondsSinceEpoch(
+                              order.createdAt,
+                            ).toString().substring(0, 19),
                           ),
                         ],
                       ),
@@ -144,9 +138,13 @@ class OrderListScreen extends ConsumerWidget {
                               (user?.canMakePayment ?? false))
                             ElevatedButton.icon(
                               onPressed: () {
-                                ref.read(orderNotifierProvider.notifier).simulatePayment(order);
+                                ref
+                                    .read(orderNotifierProvider.notifier)
+                                    .simulatePayment(order);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Processing payment...')),
+                                  const SnackBar(
+                                    content: Text('Processing payment...'),
+                                  ),
                                 );
                               },
                               icon: const Icon(Icons.payment, size: 18),
@@ -162,29 +160,17 @@ class OrderListScreen extends ConsumerWidget {
                                 backgroundColor: Colors.orange,
                               ),
                               onPressed: () {
-                                ref.read(orderNotifierProvider.notifier).simulatePayment(order);
+                                ref
+                                    .read(orderNotifierProvider.notifier)
+                                    .simulatePayment(order);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Retrying payment...')),
+                                  const SnackBar(
+                                    content: Text('Retrying payment...'),
+                                  ),
                                 );
                               },
                               icon: const Icon(Icons.replay, size: 18),
                               label: const Text('Retry Payment'),
-                            ),
-
-                          // "Check Status" for existing payments
-                          if (order.paymentId != null)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8.0),
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  ref.read(orderNotifierProvider.notifier).checkPaymentStatus(order);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Checking payment status...')),
-                                  );
-                                },
-                                icon: const Icon(Icons.refresh, size: 18),
-                                label: const Text('Check Status'),
-                              ),
                             ),
                         ],
                       ),
@@ -221,9 +207,15 @@ class OrderListScreen extends ConsumerWidget {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
+            ),
           ),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+          ),
         ],
       ),
     );
