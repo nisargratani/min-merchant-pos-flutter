@@ -72,4 +72,17 @@ class User {
       token: token ?? this.token,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is User &&
+          runtimeType == other.runtimeType &&
+          userId == other.userId &&
+          name == other.name &&
+          role == other.role &&
+          token == other.token;
+
+  @override
+  int get hashCode => userId.hashCode ^ name.hashCode ^ role.hashCode ^ token.hashCode;
 }
