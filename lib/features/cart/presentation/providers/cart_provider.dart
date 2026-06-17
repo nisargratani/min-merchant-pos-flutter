@@ -58,7 +58,7 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
   }
 
   Future<void> fetchCart() async {
-    state = const AsyncValue.loading();
+    // Remove state = const AsyncValue.loading() to prevent UI flickering on refresh
     final result = await _getCartUseCase(const NoParams());
     result.fold(
       (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
