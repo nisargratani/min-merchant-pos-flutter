@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 import '../utils/logger.dart';
+import '../database/shared_prefs_service.dart';
 
-/// Provider for SharedPreferences — overridden in main.dart
+/// Provider for SharedPreferences
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('sharedPreferences must be overridden at startup');
+  return SharedPrefsService.instance;
 });
 
 /// Provider for the configured Dio instance

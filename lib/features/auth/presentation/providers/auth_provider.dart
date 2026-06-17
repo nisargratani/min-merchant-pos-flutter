@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/network_info.dart';
 import '../../../../core/usecase/usecase.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
 import '../../data/datasources/auth_local_data_source.dart';
@@ -24,6 +25,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepositoryImpl(
     remoteDataSource: ref.watch(authRemoteDataSourceProvider),
     localDataSource: ref.watch(authLocalDataSourceProvider),
+    networkInfo: ref.watch(networkInfoProvider),
   );
 });
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_routes.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../cart/presentation/providers/cart_provider.dart';
 import '../providers/product_provider.dart';
@@ -23,19 +24,19 @@ class ProductListScreen extends ConsumerWidget {
             children: [
               IconButton(
                 icon: const Icon(Icons.shopping_cart),
-                onPressed: () => context.push('/cart'),
+                onPressed: () => context.push(AppRoutes.cart),
               ),
             ],
           ),
           if (user?.canViewOwnOrders ?? false)
             IconButton(
               icon: const Icon(Icons.receipt_long),
-              onPressed: () => context.push('/orders'),
+              onPressed: () => context.push(AppRoutes.orders),
             ),
           if (user?.canViewReports ?? false)
             IconButton(
               icon: const Icon(Icons.analytics),
-              onPressed: () => context.push('/reports'),
+              onPressed: () => context.push(AppRoutes.reports),
             ),
           IconButton(
             icon: const Icon(Icons.logout),

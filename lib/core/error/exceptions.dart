@@ -6,7 +6,7 @@ class ServerException implements Exception {
   ServerException({required this.message, this.statusCode});
 
   @override
-  String toString() => 'ServerException($statusCode): $message';
+  String toString() => message;
 }
 
 /// Thrown when there is no internet connection.

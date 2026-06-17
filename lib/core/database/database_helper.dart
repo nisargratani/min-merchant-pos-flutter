@@ -18,7 +18,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -50,6 +50,15 @@ class DatabaseHelper {
         FOREIGN KEY (localOrderId) REFERENCES offline_orders (localOrderId) ON DELETE CASCADE
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE products (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        price REAL NOT NULL,
+        stock INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -57,6 +66,16 @@ class DatabaseHelper {
       // Add payment simulation columns
       await db.execute('ALTER TABLE offline_orders ADD COLUMN paymentRef TEXT');
       await db.execute('ALTER TABLE offline_orders ADD COLUMN paymentId INTEGER');
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE products (
+          id INTEGER PRIMARY KEY,
+          name TEXT NOT NULL,
+          price REAL NOT NULL,
+          stock INTEGER NOT NULL
+        )
+      ''');
     }
   }
 }

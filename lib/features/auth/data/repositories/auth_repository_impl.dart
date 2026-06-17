@@ -3,19 +3,28 @@ import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
 import '../datasources/auth_local_data_source.dart';
 
+import '../../../../core/network/network_info.dart';
+
 /// Concrete implementation of [AuthRepository].
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource _remoteDataSource;
   final AuthLocalDataSource _localDataSource;
+  final NetworkInfo _networkInfo;
 
   AuthRepositoryImpl({
     required AuthRemoteDataSource remoteDataSource,
     required AuthLocalDataSource localDataSource,
+    required NetworkInfo networkInfo,
   })  : _remoteDataSource = remoteDataSource,
-        _localDataSource = localDataSource;
+        _localDataSource = localDataSource,
+        _networkInfo = networkInfo;
 
   @override
   Future<User> login(String username, String password) async {
+    if (!await _networkInfo.isConnected) {
+      throw Exception('No internet available');
+    }
+    
     final data = await _remoteDataSource.login(username, password);
     final user = User.fromJson(data);
 

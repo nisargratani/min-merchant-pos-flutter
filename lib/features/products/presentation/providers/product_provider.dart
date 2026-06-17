@@ -7,15 +7,25 @@ import '../../domain/entities/product.dart';
 import '../../domain/repositories/product_repository.dart';
 import '../../domain/usecases/get_products_usecase.dart';
 
+import '../../../../core/network/network_info.dart';
+import '../../../../core/database/database_helper.dart';
+import '../../data/datasources/product_local_data_source.dart';
+
 // ── Data Sources ──
 final productRemoteDataSourceProvider = Provider<ProductRemoteDataSource>((ref) {
   return ProductRemoteDataSource(ref.watch(dioProvider));
+});
+
+final productLocalDataSourceProvider = Provider<ProductLocalDataSource>((ref) {
+  return ProductLocalDataSourceImpl(ref.watch(databaseHelperProvider));
 });
 
 // ── Repository ──
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
   return ProductRepositoryImpl(
     remoteDataSource: ref.watch(productRemoteDataSourceProvider),
+    localDataSource: ref.watch(productLocalDataSourceProvider),
+    networkInfo: ref.watch(networkInfoProvider),
   );
 });
 
