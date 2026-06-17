@@ -32,10 +32,18 @@ final getPendingSyncUseCaseProvider = Provider<GetPendingSyncUseCase>((ref) {
 
 final todaySalesProvider = FutureProvider<TodaySalesReport>((ref) async {
   final useCase = ref.watch(getTodaySalesUseCaseProvider);
-  return useCase(const NoParams());
+  final result = await useCase(const NoParams());
+  return result.fold(
+    (failure) => throw failure,
+    (report) => report,
+  );
 });
 
 final pendingSyncProvider = FutureProvider<PendingSyncReport>((ref) async {
   final useCase = ref.watch(getPendingSyncUseCaseProvider);
-  return useCase(const NoParams());
+  final result = await useCase(const NoParams());
+  return result.fold(
+    (failure) => throw failure,
+    (report) => report,
+  );
 });

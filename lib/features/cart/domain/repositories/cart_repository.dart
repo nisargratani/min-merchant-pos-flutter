@@ -1,9 +1,11 @@
+import '../../../../core/error/failures.dart';
+import '../../../../core/utils/either.dart';
 import '../entities/cart_item.dart';
 
 /// Abstract cart repository — domain layer contract.
 abstract class CartRepository {
-  Future<Cart> getCart();
-  Future<void> addToCart(int productId, int qty);
-  Future<void> removeFromCart(int productId);
-  Future<void> clearCart();
+  Future<Either<Failure, Cart>> getCart();
+  Future<Either<Failure, void>> addToCart(int productId, int qty);
+  Future<Either<Failure, void>> removeFromCart(int productId);
+  Future<Either<Failure, void>> clearCart();
 }

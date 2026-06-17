@@ -59,39 +59,35 @@ class CartNotifier extends StateNotifier<AsyncValue<Cart>> {
 
   Future<void> fetchCart() async {
     state = const AsyncValue.loading();
-    try {
-      final cart = await _getCartUseCase(const NoParams());
-      state = AsyncValue.data(cart);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    final result = await _getCartUseCase(const NoParams());
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+      (cart) => state = AsyncValue.data(cart),
+    );
   }
 
   Future<void> addToCart(int productId, int qty) async {
-    try {
-      await _addToCartUseCase(AddToCartParams(productId: productId, qty: qty));
-      await fetchCart();
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    final result = await _addToCartUseCase(AddToCartParams(productId: productId, qty: qty));
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+      (_) => fetchCart(),
+    );
   }
 
   Future<void> removeFromCart(int productId) async {
-    try {
-      await _removeFromCartUseCase(productId);
-      await fetchCart();
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    final result = await _removeFromCartUseCase(productId);
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+      (_) => fetchCart(),
+    );
   }
 
   Future<void> clearCart() async {
-    try {
-      await _clearCartUseCase(const NoParams());
-      state = const AsyncValue.data(Cart.empty);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    final result = await _clearCartUseCase(const NoParams());
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+      (_) => state = const AsyncValue.data(Cart.empty),
+    );
   }
 }
 

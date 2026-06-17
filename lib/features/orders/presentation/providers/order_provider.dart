@@ -81,95 +81,107 @@ class OrderNotifier extends StateNotifier<AsyncValue<List<OrderEntity>>> {
 
   /// Fetch all local orders.
   Future<void> fetchOrders() async {
-    try {
-      final orders = await _repository.getLocalOrders();
-      state = AsyncValue.data(orders);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    final result = await _repository.getLocalOrders();
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+      (orders) => state = AsyncValue.data(orders),
+    );
   }
 
   /// Create an order from the current cart.
   Future<void> checkout(String paymentMode) async {
-    try {
-      final cartState = _cartNotifier.state;
-      final cart = cartState.valueOrNull;
-      if (cart == null || cart.items.isEmpty) return;
+    final cartState = _cartNotifier.state;
+    final cart = cartState.valueOrNull;
+    if (cart == null || cart.items.isEmpty) return;
 
-      final localOrderId = const Uuid().v4();
-      final isOnline = await _networkInfo.isConnected;
+    final localOrderId = const Uuid().v4();
+    final isOnline = await _networkInfo.isConnected;
 
-      final orderItems = cart.items
-          .map((item) => OrderItem(
-                productId: item.productId,
-                productName: item.name,
-                qty: item.qty,
-                price: item.price,
-              ))
-          .toList();
+    final orderItems = cart.items
+        .map((item) => OrderItem(
+              productId: item.productId,
+              productName: item.name,
+              qty: item.qty,
+              price: item.price,
+            ))
+        .toList();
 
-      final order = OrderEntity(
-        localOrderId: localOrderId,
-        paymentStatus: 'PENDING',
-        paymentMode: paymentMode,
-        totalAmount: cart.totalAmount,
-        syncStatus: 'PENDING',
-        items: orderItems,
-        createdAt: DateTime.now().millisecondsSinceEpoch,
-      );
+    final order = OrderEntity(
+      localOrderId: localOrderId,
+      paymentStatus: 'PENDING',
+      paymentMode: paymentMode,
+      totalAmount: cart.totalAmount,
+      syncStatus: 'PENDING',
+      items: orderItems,
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+    );
 
-      // Save to local DB first (offline-first)
-      await _repository.saveOrderLocally(order);
+    // Save to local DB first (offline-first)
+    final saveResult = await _repository.saveOrderLocally(order);
+    await saveResult.fold(
+      (failure) async {
+        state = AsyncValue.error(failure.message, StackTrace.current);
+      },
+      (_) async {
+        // Clear the server-side cart
+        await _cartNotifier.clearCart();
 
-      // Clear the server-side cart
-      await _cartNotifier.clearCart();
-
-      // If online, try to sync and process payment immediately
-      if (isOnline) {
-        try {
-          final syncedIds = await _repository.syncOrdersToBackend([order]);
-          if (syncedIds.contains(localOrderId)) {
-            // After sync, simulate payment automatically
-            await _simulatePaymentForOrder(localOrderId);
-          }
-        } catch (_) {
-          // Sync failed — will retry when connectivity returns
-          await _repository.updateOrderSyncStatus(localOrderId, 'PENDING');
+        // If online, try to sync and process payment immediately
+        if (isOnline) {
+          final syncResult = await _repository.syncOrdersToBackend([order]);
+          await syncResult.fold(
+            (_) async => await _repository.updateOrderSyncStatus(localOrderId, 'PENDING'),
+            (syncedIds) async {
+              if (syncedIds.contains(localOrderId)) {
+                // After sync, simulate payment automatically
+                await _simulatePaymentForOrder(localOrderId);
+              }
+            }
+          );
         }
-      }
 
-      // Refresh order list
-      await fetchOrders();
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+        // Refresh order list
+        await fetchOrders();
+      }
+    );
   }
 
   /// Simulate payment for a synced order (internal helper).
   Future<void> _simulatePaymentForOrder(String localOrderId) async {
-    try {
-      // Re-fetch the order to get the serverOrderId
-      final orders = await _repository.getLocalOrders();
-      final order = orders.firstWhere(
-        (o) => o.localOrderId == localOrderId,
-      );
+    final ordersResult = await _repository.getLocalOrders();
+    await ordersResult.fold(
+      (_) async {},
+      (orders) async {
+        try {
+          final order = orders.firstWhere(
+            (o) => o.localOrderId == localOrderId,
+          );
 
-      if (order.serverOrderId == null) return;
+          if (order.serverOrderId == null) return;
 
-      // Generate a unique paymentRef (transaction ID)
-      final paymentRef = 'TXN-${const Uuid().v4().substring(0, 8).toUpperCase()}';
+          // Generate a unique paymentRef (transaction ID)
+          final paymentRef = 'TXN-${const Uuid().v4().substring(0, 8).toUpperCase()}';
 
-      await _repository.processPayment(
-        order: order,
-        paymentRef: paymentRef,
-      );
-    } catch (_) {
-      // Payment failed — update status
-      await _repository.updatePaymentInfo(
-        localOrderId: localOrderId,
-        paymentStatus: 'FAILED',
-      );
-    }
+          final paymentResult = await _repository.processPayment(
+            order: order,
+            paymentRef: paymentRef,
+          );
+          
+          await paymentResult.fold(
+            (_) async => await _repository.updatePaymentInfo(
+              localOrderId: localOrderId,
+              paymentStatus: 'FAILED',
+            ),
+            (_) async {} // success handled in repository
+          );
+        } catch (_) {
+          await _repository.updatePaymentInfo(
+            localOrderId: localOrderId,
+            paymentStatus: 'FAILED',
+          );
+        }
+      }
+    );
   }
 
   /// Manually trigger payment simulation for a specific order.
@@ -177,57 +189,65 @@ class OrderNotifier extends StateNotifier<AsyncValue<List<OrderEntity>>> {
   Future<void> simulatePayment(OrderEntity order) async {
     if (order.serverOrderId == null) return;
 
-    try {
-      final paymentRef = 'TXN-${const Uuid().v4().substring(0, 8).toUpperCase()}';
+    final paymentRef = 'TXN-${const Uuid().v4().substring(0, 8).toUpperCase()}';
 
-      await _repository.processPayment(
-        order: order,
-        paymentRef: paymentRef,
-      );
+    final result = await _repository.processPayment(
+      order: order,
+      paymentRef: paymentRef,
+    );
 
-      await fetchOrders();
-    } catch (_) {
-      await _repository.updatePaymentInfo(
-        localOrderId: order.localOrderId,
-        paymentStatus: 'FAILED',
-      );
-      await fetchOrders();
-    }
+    await result.fold(
+      (_) async {
+        await _repository.updatePaymentInfo(
+          localOrderId: order.localOrderId,
+          paymentStatus: 'FAILED',
+        );
+        await fetchOrders();
+      },
+      (_) async {
+        await fetchOrders();
+      }
+    );
   }
 
   /// Check and update payment status for an order.
   Future<void> checkPaymentStatus(OrderEntity order) async {
     if (order.paymentId == null) return;
 
-    try {
-      final status = await _repository.getPaymentStatus(order.paymentId!);
-      await _repository.updatePaymentInfo(
-        localOrderId: order.localOrderId,
-        paymentStatus: status,
-      );
-      await fetchOrders();
-    } catch (_) {
-      // Silently fail
-    }
+    final result = await _repository.getPaymentStatus(order.paymentId!);
+    await result.fold(
+      (_) async {},
+      (status) async {
+        await _repository.updatePaymentInfo(
+          localOrderId: order.localOrderId,
+          paymentStatus: status,
+        );
+        await fetchOrders();
+      }
+    );
   }
 
   /// Sync all pending/failed orders to the backend, then process payments.
   Future<void> syncPendingOrders() async {
-    try {
-      await _syncOrdersUseCase(const NoParams());
-
-      // After syncing, try to process payments for synced orders that are unpaid
-      final orders = await _repository.getLocalOrders();
-      for (final order in orders) {
-        if (order.syncStatus == 'SYNCED' && order.paymentStatus == 'PENDING' && order.serverOrderId != null) {
-          await _simulatePaymentForOrder(order.localOrderId);
-        }
+    final syncResult = await _syncOrdersUseCase(const NoParams());
+    await syncResult.fold(
+      (_) async {},
+      (_) async {
+        // After syncing, try to process payments for synced orders that are unpaid
+        final ordersResult = await _repository.getLocalOrders();
+        await ordersResult.fold(
+          (_) async {},
+          (orders) async {
+            for (final order in orders) {
+              if (order.syncStatus == 'SYNCED' && order.paymentStatus == 'PENDING' && order.serverOrderId != null) {
+                await _simulatePaymentForOrder(order.localOrderId);
+              }
+            }
+          }
+        );
+        await fetchOrders();
       }
-
-      await fetchOrders();
-    } catch (_) {
-      // Silently fail — will retry on next connectivity change
-    }
+    );
   }
 
   @override

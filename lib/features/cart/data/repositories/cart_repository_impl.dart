@@ -1,3 +1,5 @@
+import '../../../../core/error/failures.dart';
+import '../../../../core/utils/either.dart';
 import '../../domain/entities/cart_item.dart';
 import '../../domain/repositories/cart_repository.dart';
 import '../datasources/cart_remote_data_source.dart';
@@ -10,23 +12,42 @@ class CartRepositoryImpl implements CartRepository {
       : _remoteDataSource = remoteDataSource;
 
   @override
-  Future<Cart> getCart() async {
-    final data = await _remoteDataSource.getCart();
-    return Cart.fromJson(data);
+  Future<Either<Failure, Cart>> getCart() async {
+    try {
+      final data = await _remoteDataSource.getCart();
+      return Right(Cart.fromJson(data));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<void> addToCart(int productId, int qty) async {
-    await _remoteDataSource.addToCart(productId, qty);
+  Future<Either<Failure, void>> addToCart(int productId, int qty) async {
+    try {
+      await _remoteDataSource.addToCart(productId, qty);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<void> removeFromCart(int productId) async {
-    await _remoteDataSource.removeFromCart(productId);
+  Future<Either<Failure, void>> removeFromCart(int productId) async {
+    try {
+      await _remoteDataSource.removeFromCart(productId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<void> clearCart() async {
-    await _remoteDataSource.clearCart();
+  Future<Either<Failure, void>> clearCart() async {
+    try {
+      await _remoteDataSource.clearCart();
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 }

@@ -4,6 +4,9 @@ import '../datasources/auth_remote_data_source.dart';
 import '../datasources/auth_local_data_source.dart';
 
 import '../../../../core/network/network_info.dart';
+import '../../../../core/error/failures.dart';
+import '../../../../core/error/exceptions.dart';
+import '../../../../core/utils/either.dart';
 
 /// Concrete implementation of [AuthRepository].
 class AuthRepositoryImpl implements AuthRepository {
@@ -20,34 +23,45 @@ class AuthRepositoryImpl implements AuthRepository {
         _networkInfo = networkInfo;
 
   @override
-  Future<User> login(String username, String password) async {
+  Future<Either<Failure, User>> login(String username, String password) async {
     if (!await _networkInfo.isConnected) {
-      throw Exception('No internet available');
+      return const Left(NetworkFailure());
     }
     
-    final data = await _remoteDataSource.login(username, password);
-    final user = User.fromJson(data);
+    try {
+      final data = await _remoteDataSource.login(username, password);
+      final user = User.fromJson(data);
 
-    // Store token securely
-    if (user.token != null) {
-      await _localDataSource.saveToken(user.token!);
+      // Store token securely
+      if (user.token != null) {
+        await _localDataSource.saveToken(user.token!);
+      }
+
+      // Cache user info
+      await _localDataSource.cacheUser(data);
+
+      return Right(user);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
-
-    // Cache user info
-    await _localDataSource.cacheUser(data);
-
-    return user;
   }
 
   @override
-  Future<void> logout() async {
-    await _remoteDataSource.logout();
-    await _localDataSource.clearAll();
+  Future<Either<Failure, void>> logout() async {
+    try {
+      await _remoteDataSource.logout();
+      await _localDataSource.clearAll();
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<User?> getCurrentUser() async {
-    if (!isAuthenticated) return null;
+  Future<Either<Failure, User?>> getCurrentUser() async {
+    if (!isAuthenticated) return const Right(null);
 
     try {
       final data = await _remoteDataSource.getMe();
@@ -56,16 +70,16 @@ class AuthRepositoryImpl implements AuthRepository {
       data['token'] = token;
       final user = User.fromJson(data);
       await _localDataSource.cacheUser(data);
-      return user;
+      return Right(user);
     } catch (_) {
       // If API call fails, try cached user
       final cached = _localDataSource.getCachedUser();
       if (cached != null) {
-        return User.fromJson(cached);
+        return Right(User.fromJson(cached));
       }
       // Token might be expired — clear it
       await _localDataSource.clearAll();
-      return null;
+      return const Right(null);
     }
   }
 

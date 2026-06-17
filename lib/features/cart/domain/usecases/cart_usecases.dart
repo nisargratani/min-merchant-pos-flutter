@@ -1,4 +1,6 @@
 import '../../../../core/usecase/usecase.dart';
+import '../../../../core/error/failures.dart';
+import '../../../../core/utils/either.dart';
 import '../entities/cart_item.dart';
 import '../repositories/cart_repository.dart';
 
@@ -8,7 +10,7 @@ class GetCartUseCase implements UseCase<Cart, NoParams> {
   GetCartUseCase(this._repository);
 
   @override
-  Future<Cart> call(NoParams params) => _repository.getCart();
+  Future<Either<Failure, Cart>> call(NoParams params) => _repository.getCart();
 }
 
 /// Parameters for adding to cart.
@@ -24,7 +26,7 @@ class AddToCartUseCase implements UseCase<void, AddToCartParams> {
   AddToCartUseCase(this._repository);
 
   @override
-  Future<void> call(AddToCartParams params) =>
+  Future<Either<Failure, void>> call(AddToCartParams params) =>
       _repository.addToCart(params.productId, params.qty);
 }
 
@@ -34,7 +36,7 @@ class RemoveFromCartUseCase implements UseCase<void, int> {
   RemoveFromCartUseCase(this._repository);
 
   @override
-  Future<void> call(int productId) => _repository.removeFromCart(productId);
+  Future<Either<Failure, void>> call(int productId) => _repository.removeFromCart(productId);
 }
 
 /// Clears all items from the cart.
@@ -43,5 +45,5 @@ class ClearCartUseCase implements UseCase<void, NoParams> {
   ClearCartUseCase(this._repository);
 
   @override
-  Future<void> call(NoParams params) => _repository.clearCart();
+  Future<Either<Failure, void>> call(NoParams params) => _repository.clearCart();
 }

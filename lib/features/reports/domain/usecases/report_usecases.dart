@@ -1,4 +1,6 @@
 import '../../../../core/usecase/usecase.dart';
+import '../../../../core/error/failures.dart';
+import '../../../../core/utils/either.dart';
 import '../entities/report.dart';
 import '../repositories/report_repository.dart';
 
@@ -8,7 +10,7 @@ class GetTodaySalesUseCase implements UseCase<TodaySalesReport, NoParams> {
   GetTodaySalesUseCase(this._repository);
 
   @override
-  Future<TodaySalesReport> call(NoParams params) => _repository.getTodaySales();
+  Future<Either<Failure, TodaySalesReport>> call(NoParams params) => _repository.getTodaySales();
 }
 
 /// Fetches pending sync count.
@@ -17,5 +19,5 @@ class GetPendingSyncUseCase implements UseCase<PendingSyncReport, NoParams> {
   GetPendingSyncUseCase(this._repository);
 
   @override
-  Future<PendingSyncReport> call(NoParams params) => _repository.getPendingSync();
+  Future<Either<Failure, PendingSyncReport>> call(NoParams params) => _repository.getPendingSync();
 }

@@ -62,33 +62,27 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> _init() async {
-    try {
-      final user = await _getCurrentUserUseCase(const NoParams());
-      state = AsyncValue.data(user);
-    } catch (e) {
-      state = const AsyncValue.data(null);
-    }
+    final result = await _getCurrentUserUseCase(const NoParams());
+    result.fold(
+      (failure) => state = const AsyncValue.data(null),
+      (user) => state = AsyncValue.data(user),
+    );
   }
 
   Future<void> login(String username, String password) async {
     state = const AsyncValue.loading();
-    try {
-      final user = await _loginUseCase(
-        LoginParams(username: username, password: password),
-      );
-      state = AsyncValue.data(user);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    final result = await _loginUseCase(
+      LoginParams(username: username, password: password),
+    );
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+      (user) => state = AsyncValue.data(user),
+    );
   }
 
   Future<void> logout() async {
     state = const AsyncValue.loading();
-    try {
-      await _logoutUseCase(const NoParams());
-    } catch (_) {
-      // Ignore logout errors
-    }
+    await _logoutUseCase(const NoParams());
     state = const AsyncValue.data(null);
   }
 }

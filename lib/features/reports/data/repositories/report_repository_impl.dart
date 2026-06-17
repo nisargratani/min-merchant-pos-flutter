@@ -1,3 +1,5 @@
+import '../../../../core/error/failures.dart';
+import '../../../../core/utils/either.dart';
 import '../../domain/entities/report.dart';
 import '../../domain/repositories/report_repository.dart';
 import '../datasources/report_remote_data_source.dart';
@@ -10,14 +12,22 @@ class ReportRepositoryImpl implements ReportRepository {
       : _remoteDataSource = remoteDataSource;
 
   @override
-  Future<TodaySalesReport> getTodaySales() async {
-    final data = await _remoteDataSource.getTodaySales();
-    return TodaySalesReport.fromJson(data);
+  Future<Either<Failure, TodaySalesReport>> getTodaySales() async {
+    try {
+      final data = await _remoteDataSource.getTodaySales();
+      return Right(TodaySalesReport.fromJson(data));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<PendingSyncReport> getPendingSync() async {
-    final data = await _remoteDataSource.getPendingSync();
-    return PendingSyncReport.fromJson(data);
+  Future<Either<Failure, PendingSyncReport>> getPendingSync() async {
+    try {
+      final data = await _remoteDataSource.getPendingSync();
+      return Right(PendingSyncReport.fromJson(data));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 }

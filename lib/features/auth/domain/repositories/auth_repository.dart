@@ -1,9 +1,11 @@
+import '../../../../core/error/failures.dart';
+import '../../../../core/utils/either.dart';
 import '../entities/user.dart';
 
-/// Abstract auth repository — domain layer contract.
+/// Abstract authentication repository — domain layer contract.
 abstract class AuthRepository {
-  Future<User> login(String username, String password);
-  Future<void> logout();
-  Future<User?> getCurrentUser();
+  Future<Either<Failure, User>> login(String username, String password);
+  Future<Either<Failure, void>> logout();
+  Future<Either<Failure, User?>> getCurrentUser();
   bool get isAuthenticated;
 }

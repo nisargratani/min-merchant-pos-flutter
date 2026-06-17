@@ -1,4 +1,6 @@
 import '../../../../core/usecase/usecase.dart';
+import '../../../../core/error/failures.dart';
+import '../../../../core/utils/either.dart';
 import '../entities/user.dart';
 import '../repositories/auth_repository.dart';
 
@@ -17,7 +19,7 @@ class LoginUseCase implements UseCase<User, LoginParams> {
   LoginUseCase(this._repository);
 
   @override
-  Future<User> call(LoginParams params) {
+  Future<Either<Failure, User>> call(LoginParams params) {
     return _repository.login(params.username, params.password);
   }
 }

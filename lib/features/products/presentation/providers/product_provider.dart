@@ -39,5 +39,9 @@ final getProductsUseCaseProvider = Provider<GetProductsUseCase>((ref) {
 /// Fetches product list; supports refresh via ref.invalidate(productsProvider).
 final productsProvider = FutureProvider<List<Product>>((ref) async {
   final useCase = ref.watch(getProductsUseCaseProvider);
-  return useCase(const NoParams());
+  final result = await useCase(const NoParams());
+  return result.fold(
+    (failure) => throw failure,
+    (products) => products,
+  );
 });

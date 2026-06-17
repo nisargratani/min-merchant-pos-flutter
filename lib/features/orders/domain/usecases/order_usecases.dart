@@ -1,4 +1,6 @@
 import '../../../../core/usecase/usecase.dart';
+import '../../../../core/error/failures.dart';
+import '../../../../core/utils/either.dart';
 import '../../../cart/domain/entities/cart_item.dart';
 import '../entities/order_entity.dart';
 import '../repositories/order_repository.dart';
@@ -19,7 +21,7 @@ class CreateOrderUseCase implements UseCase<OrderEntity, CreateOrderParams> {
   CreateOrderUseCase(this._repository);
 
   @override
-  Future<OrderEntity> call(CreateOrderParams params) async {
+  Future<Either<Failure, OrderEntity>> call(CreateOrderParams params) async {
     // UUID is generated at the provider level and passed via the entity
     throw UnimplementedError(
       'CreateOrderUseCase.call is not used directly. '
@@ -28,7 +30,7 @@ class CreateOrderUseCase implements UseCase<OrderEntity, CreateOrderParams> {
   }
 
   /// Save order to local DB.
-  Future<void> saveLocally(OrderEntity order) => _repository.saveOrderLocally(order);
+  Future<Either<Failure, void>> saveLocally(OrderEntity order) => _repository.saveOrderLocally(order);
 }
 
 /// Fetches all orders (combines local + remote).
@@ -38,9 +40,9 @@ class GetOrdersUseCase implements UseCase<List<OrderEntity>, NoParams> {
   GetOrdersUseCase(this._repository);
 
   @override
-  Future<List<OrderEntity>> call(NoParams params) => _repository.getLocalOrders();
+  Future<Either<Failure, List<OrderEntity>>> call(NoParams params) => _repository.getLocalOrders();
 
-  Future<List<OrderEntity>> getRemoteOrders() => _repository.getRemoteOrders();
+  Future<Either<Failure, List<OrderEntity>>> getRemoteOrders() => _repository.getRemoteOrders();
 }
 
 /// Syncs pending offline orders to the backend.
@@ -50,21 +52,32 @@ class SyncOrdersUseCase implements UseCase<void, NoParams> {
   SyncOrdersUseCase(this._repository);
 
   @override
-  Future<void> call(NoParams params) async {
-    final pending = await _repository.getPendingOrders();
-    if (pending.isEmpty) return;
+  Future<Either<Failure, void>> call(NoParams params) async {
+    final pendingResult = await _repository.getPendingOrders();
+    return pendingResult.fold(
+      (failure) => Left(failure),
+      (pending) async {
+        if (pending.isEmpty) return const Right(null);
 
-    final syncedIds = await _repository.syncOrdersToBackend(pending);
+        final syncedResult = await _repository.syncOrdersToBackend(pending);
+        
+        return syncedResult.fold(
+          (failure) => Left(failure),
+          (syncedIds) async {
+            for (final id in syncedIds) {
+              await _repository.updateOrderSyncStatus(id, 'SYNCED');
+            }
 
-    for (final id in syncedIds) {
-      await _repository.updateOrderSyncStatus(id, 'SYNCED');
-    }
-
-    // Mark non-synced as FAILED
-    for (final order in pending) {
-      if (!syncedIds.contains(order.localOrderId)) {
-        await _repository.updateOrderSyncStatus(order.localOrderId, 'FAILED');
+            // Mark non-synced as FAILED
+            for (final order in pending) {
+              if (!syncedIds.contains(order.localOrderId)) {
+                await _repository.updateOrderSyncStatus(order.localOrderId, 'FAILED');
+              }
+            }
+            return const Right(null);
+          }
+        );
       }
-    }
+    );
   }
 }
