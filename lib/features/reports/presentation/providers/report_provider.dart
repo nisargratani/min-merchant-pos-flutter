@@ -3,6 +3,7 @@ import '../../../../core/database/shared_prefs_service.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/network/network_info.dart';
 import '../../../../core/usecase/usecase.dart';
+import '../../../orders/presentation/providers/order_provider.dart';
 import '../../data/datasources/report_local_data_source.dart';
 import '../../data/datasources/report_remote_data_source.dart';
 import '../../data/repositories/report_repository_impl.dart';
@@ -24,6 +25,7 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
   return ReportRepositoryImpl(
     remoteDataSource: ref.watch(reportRemoteDataSourceProvider),
     localDataSource: ref.watch(reportLocalDataSourceProvider),
+    orderLocalDataSource: ref.watch(orderLocalDataSourceProvider),
     networkInfo: ref.watch(networkInfoProvider),
   );
 });
@@ -39,7 +41,7 @@ final getPendingSyncUseCaseProvider = Provider<GetPendingSyncUseCase>((ref) {
 
 // ── State ──
 
-final todaySalesProvider = FutureProvider<TodaySalesReport>((ref) async {
+final todaySalesProvider = FutureProvider.autoDispose<TodaySalesReport>((ref) async {
   final useCase = ref.watch(getTodaySalesUseCaseProvider);
   final result = await useCase(const NoParams());
   return result.fold(
@@ -48,7 +50,7 @@ final todaySalesProvider = FutureProvider<TodaySalesReport>((ref) async {
   );
 });
 
-final pendingSyncProvider = FutureProvider<PendingSyncReport>((ref) async {
+final pendingSyncProvider = FutureProvider.autoDispose<PendingSyncReport>((ref) async {
   final useCase = ref.watch(getPendingSyncUseCaseProvider);
   final result = await useCase(const NoParams());
   return result.fold(
